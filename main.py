@@ -114,7 +114,7 @@ async def start(ctx):
     voice_client_ref = await channel.connect()
     listening_task = bot.loop.create_task(listen_voice())
     bot_callsign = bot.user.display_name[:5]
-    await speak(f"{bot_callsign} 10-8")
+    await speak(f"2 David Double 0 show me 10-8 active Dispatch")
     await ctx.send(f"Dispatcher online as {bot_callsign}!")
 
 @bot.command()
