@@ -1,0 +1,66 @@
+10-1 Receiving Poorly
+10-2 Receiving Well
+10-3 Negative or No
+10-4 Affirmative or Yes
+10-5 Relay
+10-6 Busy
+10-7 Out of Service
+10-8 In Service
+10-9 Repeat
+10-10 Out of Service (Subject to call)
+10-11 Send Wrecker
+10-12 Officials or Visitors Present
+10-13 Weather/Road Report
+10-14 Escort or Convoy
+10-15 Prisoner in Custody
+10-16 Send Ambulance
+10-17 Pick up or Drop off an Item
+10-19 Enroute to ___ (Location)
+10-20 What Is Your Location?
+10-21 Call by Telephone
+10-22 Disregard Last Information
+10-23 Stand-by
+10-24 Traffic Stop
+10-25 Intoxicated Driver (DWI)
+10-26 Reckless Driver
+10-27 Armed Person
+10-28 Vehicle Registration Check (Lic Plate)
+10-29 Local Warrant Check (Person)
+10-30 Drivers License Check
+10-31 Drivers License History
+10-32 Breath Test (BAC)
+10-33 Emergency Traffic
+10-34 Call Coroner
+10-35 Confidential Information
+10-36 What Time Is It ?
+10-37 Pursuit in Progress
+10-38 Accident with Property Damage, Road IS NOT Blocked
+10-39 Accident with Property Damage, Road IS Blocked
+10-40 Accident with Property Damage, Road IS NOT Blocked, WITH INJURY
+10-41 Accident with Property Damage, Road IS Blocked, WITH INJURY
+10-42 Officer is at Home
+10-43 Abandoned Vehicle
+10-44 Motorist Assist (Broken Down Motorist)
+10-45 Obstruction on Highway
+10-46 Livestock on Highway
+10-47 Mentally Disturbed Person
+10-48 Pedestrian
+10-49 Meet at ____ (Location)
+10-50 Traffic Check / No Traffic
+10-51 Check NCIC for Warrants / Stolen Files
+10-52 NO Warrants / NOT Stolen
+10-53 Does Have Warrants / IS Stolen
+10-54 Criminal History Check
+10-56 Hazardous Materials
+10-57 Fight in Progress
+10-58 Suspicious Person
+10-63 NET Directed
+10-64 NET Clear
+10-65 Hit and Run, NO INJURY
+10-66 Hit and Run, WITH INJURY
+10-67 Vehicle Fire
+10-86 Switch to Channel _____ (Name Channel)
+10-88 Advise Your Phone Number
+10-94 Meal Break at ____ (Name location)
+10-97 Arrived at Scene
+10-98 Finished With Last Assignment
