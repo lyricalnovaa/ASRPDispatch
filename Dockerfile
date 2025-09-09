@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-RUN git clone https://github.com/Rapptz/discord-ext-voice-recv.git /tmp/voice-recv \
+RUN git clone https://github.com/imayhaveborkedit/discord-ext-voice-recv/tree/main/discord/ext/voice_recv
     && pip install --no-cache-dir /tmp/voice-recv
 
 COPY requirements.txt .
