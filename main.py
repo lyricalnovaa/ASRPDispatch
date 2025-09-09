@@ -7,35 +7,31 @@ import edge_tts
 from pydub import AudioSegment
 from dotenv import load_dotenv
 from keep_alive import keep_alive
+
 # === ENV & CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 CONFIG = {
-    "RTO_CHANNEL_ID": 1341573057952878674,  # Replace with your voice channel ID
+    "RTO_CHANNEL_ID": 1341573057952878674,  # replace with your VC ID
     "VOICE": "en-US-GuyNeural",
     "OUTPUT_TTS_FILE": "dispatch_tts.mp3"
 }
 
 # === BOT SETUP ===
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.voice_states = True
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # === GLOBAL STATE ===
 voice_client_ref = None
-listening_task = None
 recognizer = sr.Recognizer()
-audio_queue = asyncio.Queue()
-is_listening = False
 unit_status = {}  # callsign -> status (10-8, 10-7, etc.)
+is_listening = False
 
 # === TTS HANDLER ===
 async def speak(text: str):
     global voice_client_ref
     if not voice_client_ref or not voice_client_ref.is_connected():
-        print("[ERROR] Not connected to a voice channel.")
+        print("[ERROR] Not connected to VC.")
         return
 
     tts = edge_tts.Communicate(text, CONFIG["VOICE"])
@@ -53,39 +49,38 @@ async def speak(text: str):
 
     try:
         os.remove(temp_file)
-    except OSError as e:
-        print(f"Error removing file: {e}")
+    except OSError:
+        pass
 
-# === STT HANDLER ===
-async def process_audio_queue():
-    global audio_queue, is_listening
-    while is_listening:
-        try:
-            user, pcm_data = await asyncio.wait_for(audio_queue.get(), timeout=10)
-            if pcm_data is None:
-                continue
+# === SINK FOR VOICE RECEIVE ===
+class DispatchSink(discord.sinks.RawDataSink):
+    def __init__(self, *, loop):
+        super().__init__(filters=None, encoding="pcm")
+        self.loop = loop
 
-            # Convert Discord PCM audio to WAV for SpeechRecognition
-            audio_segment = AudioSegment(
-                pcm_data,
-                frame_rate=48000,
-                sample_width=2,
-                channels=2
-            ).set_frame_rate(16000).set_channels(1)
-            temp_wav_file = f"temp_audio_{user.id}.wav"
-            audio_segment.export(temp_wav_file, format="wav")
+    def on_packet(self, user, packet):
+        if not user or not packet:
+            return
+        asyncio.run_coroutine_threadsafe(self.process_audio(user, packet), self.loop)
 
-            with sr.AudioFile(temp_wav_file) as source:
-                audio_data = recognizer.record(source)
+    async def process_audio(self, user, packet):
+        pcm_path = f"temp_{user.id}.pcm"
+        with open(pcm_path, "ab") as f:
+            f.write(packet)
 
+        # when enough audio is collected, convert + transcribe
+        if os.path.getsize(pcm_path) > 48000 * 2 * 2 * 3:  # ~3s of audio
+            wav_path = pcm_path.replace(".pcm", ".wav")
+            os.system(f"ffmpeg -f s16le -ar 48000 -ac 2 -i {pcm_path} {wav_path} -y")
             try:
-                text = recognizer.recognize_google(audio_data).upper()
-                callsign = user.display_name[:5]  # first 5 characters
+                with sr.AudioFile(wav_path) as source:
+                    audio = recognizer.record(source)
+                text = recognizer.recognize_google(audio).upper()
+                callsign = user.display_name[:5]
 
-                # Handle unit status updates
                 if "10-8" in text:
                     unit_status[callsign] = "10-8"
-                    await speak(f"{callsign} is now 10-8, available for calls.")
+                    await speak(f"{callsign} is now 10-8, available.")
                 elif "10-7" in text:
                     unit_status[callsign] = "10-7"
                     await speak(f"{callsign} is now 10-7, out of service.")
@@ -93,89 +88,56 @@ async def process_audio_queue():
                     unit_status[callsign] = "10-6"
                     await speak(f"{callsign} is now 10-6, busy.")
                 elif "DISPATCH" in text and "NEED UNIT" in text:
-                    # Dispatch the first available unit
-                    available_units = [c for c, s in unit_status.items() if s == "10-8"]
-                    if available_units:
-                        assigned = available_units[0]
+                    available = [c for c, s in unit_status.items() if s == "10-8"]
+                    if available:
+                        assigned = available[0]
                         unit_status[assigned] = "10-6"
                         await speak(f"Dispatching {assigned} to the call.")
                     else:
                         await speak("No units are currently available.")
 
-            except sr.UnknownValueError:
-                print(f"[RECOGNITION] Could not understand {user.display_name}")
-            except sr.RequestError as e:
-                print(f"[RECOGNITION ERROR] Google Speech Recognition failed: {e}")
+                print(f"[HEARD] {callsign}: {text}")
 
-            # Clean up temp file
-            try:
-                os.remove(temp_wav_file)
-            except OSError as e:
-                print(f"Error removing file: {e}")
+            except Exception as e:
+                print(f"[STT ERROR] {e}")
 
-        except asyncio.TimeoutError:
-            continue
-        except Exception as e:
-            print(f"[PROCESS ERROR] {e}")
+            os.remove(pcm_path)
+            os.remove(wav_path)
 
-def on_audio_receive(user, pcm_data):
-    if is_listening:
-        asyncio.run_coroutine_threadsafe(audio_queue.put((user, pcm_data)), bot.loop)
+    def on_stop(self):
+        print("[SINK] Stopped listening.")
 
 # === BOT EVENTS ===
 @bot.event
 async def on_ready():
     print(f"[READY] Logged in as {bot.user}")
 
-@bot.event
-async def on_voice_state_update(member, before, after):
-    global voice_client_ref, listening_task, is_listening
-    if member == bot.user and before.channel and not after.channel:
-        # Bot disconnected, clean up
-        print("[DISCONNECT] Bot was disconnected from VC. Cleaning up.")
-        if listening_task:
-            listening_task.cancel()
-            await asyncio.gather(listening_task, return_exceptions=True)
-            listening_task = None
-        is_listening = False
-        voice_client_ref = None
-
 # === COMMANDS ===
 @bot.command(name="start")
 async def start_dispatcher(ctx):
-    global voice_client_ref, listening_task, is_listening
+    global voice_client_ref, is_listening
     channel = bot.get_channel(CONFIG["RTO_CHANNEL_ID"])
-
     if not isinstance(channel, discord.VoiceChannel):
         await ctx.send("❌ Invalid RTO channel ID.")
         return
-
     if is_listening:
-        await ctx.send("📻 Dispatcher is already live.")
+        await ctx.send("📻 Dispatcher already running.")
         return
 
-    try:
-        voice_client_ref = await channel.connect()
-        voice_client_ref.listen(on_audio_receive)
-        is_listening = True
-        listening_task = bot.loop.create_task(process_audio_queue())
-        bot_callsign = bot.user.display_name[:5]
-        await speak(f"{bot_callsign} 10-8")
-        await ctx.send(f"✅ Dispatcher is now online as {bot_callsign}!")
-    except Exception as e:
-        await ctx.send(f"❌ Could not connect to VC: {e}")
-        print(f"[ERROR] {e}")
+    voice_client_ref = await channel.connect()
+    sink = DispatchSink(loop=bot.loop)
+    voice_client_ref.listen(sink)
+    is_listening = True
+    bot_callsign = "2 David double O"
+    await speak(f"{bot_callsign} ASRPDispatch 10-8")
+    await ctx.send(f"✅ Dispatcher is online as {bot_callsign}!")
 
 @bot.command(name="stop")
 async def stop_dispatcher(ctx):
-    global voice_client_ref, listening_task, is_listening
+    global voice_client_ref, is_listening
     if voice_client_ref and voice_client_ref.is_connected():
         await voice_client_ref.disconnect()
         voice_client_ref = None
-        if listening_task:
-            listening_task.cancel()
-            await asyncio.gather(listening_task, return_exceptions=True)
-            listening_task = None
         is_listening = False
         await ctx.send("✅ Dispatcher has been shut down.")
     else:
