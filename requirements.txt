@@ -1,9 +1,7 @@
-python-dotenv
 discord.py
 PyNaCl
-pydub
+python-dotenv
 SpeechRecognition
+pydub
 edge-tts
-transformers
-torch
 flask
