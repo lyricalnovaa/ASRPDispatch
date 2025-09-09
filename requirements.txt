@@ -5,4 +5,3 @@ pydub
 edge-tts
 flask
 python-dotenv
-discord.py
