@@ -1,18 +1,24 @@
-# Use a base image with Python
+# Use a small Python base image
 FROM python:3.11-slim
 
-# Install FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg
+# Install FFmpeg + runtime deps (opus is important for Discord voice)
+RUN apt-get update && apt-get install -y \
+    ffmpeg \
+    libopus0 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Copy your requirements.txt and install dependencies
+# Copy requirements first (better build caching)
 COPY requirements.txt .
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy your bot code
+# Copy the rest of your code
 COPY . .
 
-# Command to run your bot
+# Run the bot
 CMD ["python", "main.py"]
