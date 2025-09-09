@@ -6,7 +6,7 @@ import speech_recognition as sr
 import edge_tts
 from pydub import AudioSegment
 from dotenv import load_dotenv
-
+from keep_alive import keep_alive
 # === ENV & CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -186,4 +186,5 @@ if __name__ == "__main__":
     if not TOKEN:
         print("TOKEN not set. Exiting.")
     else:
+        keep_alive()
         bot.run(TOKEN)
