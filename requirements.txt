@@ -1,6 +1,8 @@
 discord.py
-python-dotenv
+pydub
 SpeechRecognition
 edge-tts
-pydub
-pynacl
+transformers
+torch
+flask
+PyNaCl
