@@ -12,9 +12,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-RUN git clone https://github.com/imayhaveborkedit/discord-ext-voice-recv/tree/main/discord/ext/voice_recv
+# Clone and install voice receive extension
+RUN git clone https://github.com/imayhaveborkedit/discord-ext-voice-recv.git /tmp/voice-recv \
     && pip install --no-cache-dir /tmp/voice-recv
 
+# Copy requirements and install
 COPY requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
