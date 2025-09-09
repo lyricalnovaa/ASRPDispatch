@@ -1,8 +1,9 @@
+python-dotenv
 discord.py
+PyNaCl
 pydub
 SpeechRecognition
 edge-tts
 transformers
 torch
 flask
-PyNaCl
