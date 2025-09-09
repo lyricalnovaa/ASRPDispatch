@@ -1,7 +1,8 @@
-discord.py
+discord-ext-voice-recv
 PyNaCl
-python-dotenv
-SpeechRecognition
+speechrecognition
 pydub
 edge-tts
 flask
+python-dotenv
+discord.py
