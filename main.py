@@ -6,13 +6,13 @@ import speech_recognition as sr
 import edge_tts
 from dotenv import load_dotenv
 from keep_alive import keep_alive
-from discord.ext import voice_recv  # the fork you installed
 
 # === CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 CONFIG = {
-    "RTO_CHANNEL_ID": 1341573057952878674,  # replace with your VC
+    "RTO_CHANNEL_ID": 1341573057952878674,  # your VC
+    "BOT_CALLSIGN": "2D-00",
     "VOICE": "en-US-GuyNeural",
     "OUTPUT_TTS_FILE": "dispatch_tts.mp3"
 }
@@ -28,8 +28,41 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 voice_client_ref = None
 listening_task = None
 recognizer = sr.Recognizer()
-unit_status = {}  # callsign -> status (10-8, 10-7, etc.)
+unit_status = {}  # callsign -> status
 audio_buffers = {}  # user.id -> bytearray
+
+# === PHONETIC ALPHABET ===
+PHONETIC = {
+    "ALPHA": "A", "BRAVO": "B", "CHARLIE": "C", "DAVID": "D",
+    "ECHO": "E", "FOXTROT": "F", "GOLF": "G", "HOTEL": "H",
+    "INDIA": "I", "JULIET": "J", "KILO": "K", "LIMA": "L",
+    "MIKE": "M", "NOVEMBER": "N", "OSCAR": "O", "PAPA": "P",
+    "QUEBEC": "Q", "ROMEO": "R", "SIERRA": "S", "TANGO": "T",
+    "UNIFORM": "U", "VICTOR": "V", "WHISKEY": "W", "XRAY": "X",
+    "YANKEE": "Y", "ZULU": "Z",
+    "ZERO": "0", "ONE": "1", "TWO": "2", "THREE": "3", "FOUR": "4",
+    "FIVE": "5", "SIX": "6", "SEVEN": "7", "EIGHT": "8", "NINE": "9",
+    "DOUBLE": "", "TRIPLE": ""
+}
+
+def parse_callsign(text):
+    words = text.upper().split()
+    result = ""
+    i = 0
+    while i < len(words):
+        w = words[i]
+        if w == "DOUBLE" and i + 1 < len(words):
+            letter = PHONETIC.get(words[i + 1], words[i + 1])
+            result += letter * 2
+            i += 2
+        elif w == "TRIPLE" and i + 1 < len(words):
+            letter = PHONETIC.get(words[i + 1], words[i + 1])
+            result += letter * 3
+            i += 2
+        else:
+            result += PHONETIC.get(w, w)
+            i += 1
+    return result
 
 # === TTS FUNCTION ===
 async def speak(text: str):
@@ -68,15 +101,20 @@ async def handle_pcm(user: discord.Member, pcm_data: bytes):
             with sr.AudioFile(wav_path) as source:
                 audio = recognizer.record(source)
             text = recognizer.recognize_google(audio).upper()
-            callsign = user.display_name[:5]
+            callsign = parse_callsign(text)
 
-            if "10-8" in text:
+            # Check for test "HI"
+            if "HI" in text:
+                await speak(f"Hello {callsign}!")
+
+            # Check for unit commands
+            if "10-8" in text or "TEN EIGHT" in text:
                 unit_status[callsign] = "10-8"
                 await speak(f"{callsign} is now 10-8")
-            elif "10-7" in text:
+            elif "10-7" in text or "TEN SEVEN" in text:
                 unit_status[callsign] = "10-7"
                 await speak(f"{callsign} is now 10-7")
-            elif "10-6" in text:
+            elif "10-6" in text or "TEN SIX" in text:
                 unit_status[callsign] = "10-6"
                 await speak(f"{callsign} is now 10-6")
             elif "DISPATCH" in text and "NEED UNIT" in text:
@@ -95,14 +133,6 @@ async def handle_pcm(user: discord.Member, pcm_data: bytes):
             os.remove(pcm_path)
             os.remove(wav_path)
 
-# === VOICE RECEIVING TASK ===
-async def listen_voice():
-    global voice_client_ref
-    if not voice_client_ref:
-        return
-    async for user, pcm in voice_recv.recv_audio(voice_client_ref):
-        await handle_pcm(user, pcm)
-
 # === BOT COMMANDS ===
 @bot.command()
 async def start(ctx):
@@ -112,19 +142,32 @@ async def start(ctx):
         await ctx.send("Invalid VC ID.")
         return
     voice_client_ref = await channel.connect()
-    listening_task = bot.loop.create_task(listen_voice())
-    bot_callsign = bot.user.display_name[:5]
-    await speak(f"2 David Double 0 show me 10-8 active Dispatch")
-    await ctx.send(f"Dispatcher online as 2D-00!")
+    await speak(f"{CONFIG['BOT_CALLSIGN']} 10-8")
+    await ctx.send(f"Dispatcher online as {CONFIG['BOT_CALLSIGN']}!")
 
 @bot.command()
 async def stop(ctx):
-    global voice_client_ref, listening_task
+    global voice_client_ref
     if voice_client_ref and voice_client_ref.is_connected():
         await voice_client_ref.disconnect()
-    if listening_task:
-        listening_task.cancel()
     await ctx.send("Dispatcher stopped.")
+
+# === VOICE RECEIVE TASK ===
+async def listen_voice():
+    global voice_client_ref
+    if not voice_client_ref:
+        return
+    import voice_recv  # the forked library
+    async for user, pcm in voice_recv.recv_audio(voice_client_ref):
+        await handle_pcm(user, pcm)
+
+# Start listening when bot joins
+@bot.event
+async def on_ready():
+    global listening_task
+    print(f"[READY] Logged in as {bot.user}")
+    if voice_client_ref and not listening_task:
+        listening_task = bot.loop.create_task(listen_voice())
 
 # === START BOT ===
 if __name__ == "__main__":
