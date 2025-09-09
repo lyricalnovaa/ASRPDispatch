@@ -1,4 +1,4 @@
-git+https://github.com/Rapptz/discord-ext-voice-recv.git
+git+https://github.com/Rapptz/discord-ext-voice-recv.git@main#egg=discord-ext-voice-recv
 PyNaCl
 speechrecognition
 pydub
