@@ -3,3 +3,4 @@ python-dotenv
 SpeechRecognition
 edge-tts
 pydub
+pynacl
