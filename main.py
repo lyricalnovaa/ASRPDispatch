@@ -12,7 +12,7 @@ from discord.ext import voice_recv  # the fork you installed
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 CONFIG = {
-    "RTO_CHANNEL_ID": 123456789012345678,  # replace with your VC
+    "RTO_CHANNEL_ID": 1341573057952878674,  # replace with your VC
     "VOICE": "en-US-GuyNeural",
     "OUTPUT_TTS_FILE": "dispatch_tts.mp3"
 }
