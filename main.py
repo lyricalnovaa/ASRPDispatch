@@ -2,6 +2,7 @@ import os
 import asyncio
 import discord
 from discord.ext import commands
+from discord.ext import voice_recv
 import speech_recognition as sr
 import edge_tts
 from pydub import AudioSegment
@@ -53,7 +54,7 @@ async def speak(text: str):
         pass
 
 # === SINK FOR VOICE RECEIVE ===
-class DispatchSink(discord.sinks.RawDataSink):
+class DispatchSink(voice_recv.RawDataSink):
     def __init__(self, *, loop):
         super().__init__(filters=None, encoding="pcm")
         self.loop = loop
