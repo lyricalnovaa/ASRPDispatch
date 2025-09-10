@@ -125,7 +125,8 @@ async def handle_pcm(user: discord.Member, pcm_data: bytes):
                     await speak(f"Dispatching {assigned} to the call.")
                 else:
                     await speak("No units are currently available.")
-
+            if "10-11" in text or "ten eleven" in text:
+                await speak(f"10 4 proceed with caution")
             print(f"[HEARD] {callsign}: {text}")
         except Exception as e:
             print(f"[STT ERROR] {e}")
@@ -141,12 +142,12 @@ async def start(ctx):
     if not isinstance(channel, discord.VoiceChannel):
         await ctx.send("Invalid VC ID.")
         return
+    
     voice_client_ref = await channel.connect()
-    await speak("2 David Double O, 10-8 active dispatch")
+    await speak(f"2 David Double O show me 10-8 active dispatch")
     await ctx.send(f"Dispatcher online as {CONFIG['BOT_CALLSIGN']}!")
 
-    # Start listening right after joining
-    import voice_recv
+    # Start listening immediately
     listening_task = bot.loop.create_task(listen_voice())
 @bot.command()
 async def stop(ctx):
