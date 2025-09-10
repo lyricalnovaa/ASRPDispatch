@@ -142,9 +142,12 @@ async def start(ctx):
         await ctx.send("Invalid VC ID.")
         return
     voice_client_ref = await channel.connect()
-    await speak(f"{CONFIG['BOT_CALLSIGN']} 10-8")
+    await speak("2 David Double O, 10-8 active dispatch")
     await ctx.send(f"Dispatcher online as {CONFIG['BOT_CALLSIGN']}!")
 
+    # Start listening right after joining
+    import voice_recv
+    listening_task = bot.loop.create_task(listen_voice())
 @bot.command()
 async def stop(ctx):
     global voice_client_ref
