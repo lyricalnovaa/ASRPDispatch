@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands 
 import speech_recognition as sr 
 import edge_tts
-from doten import load_dotenv 
+from dotenv import load_dotenv 
 from keep_alive import keep_alive 
 from pydub import AudioSegment
 # === CONFIG ===
