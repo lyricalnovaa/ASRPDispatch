@@ -1,13 +1,14 @@
-import os 
-import asyncio 
+import os
+import asyncio
 import discord
-from discord.ext import commands 
-import speech_recognition as sr 
+from discord.ext import commands
+import speech_recognition as sr
 import edge_tts
-from dotenv import load_dotenv 
-from keep_alive import keep_alive 
+from dotenv import load_dotenv
+from keep_alive import keep_alive
 from pydub import AudioSegment
 from discord.ext.voice_recv import VoiceRecvClient
+
 # === CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
@@ -58,26 +59,22 @@ async def speak(text: str):
             print(f"[DEBUG] Error deleting TTS file: {e}")
 
 # === NEW: VOICE RECEIVE HANDLERS ===
-def on_speaking(user, state):
-    """Handles the speaking status of a user."""
-    if user is None:
-        return
-    if state == SpeakingState.SPEAKING:
-        print(f"[DEBUG] {user.display_name} started speaking.")
-    else:
-        print(f"[DEBUG] {user.display_name} stopped speaking.")
+def on_voice_member_speaking_start(member):
+    """Handles when a user starts speaking."""
+    print(f"[DEBUG] {member.display_name} started speaking.")
+
+def on_voice_member_speaking_end(member):
+    """Handles when a user stops speaking."""
+    print(f"[DEBUG] {member.display_name} stopped speaking.")
 
 def on_voice_packet(user, packet):
     """Processes a raw voice packet from a user."""
     if user and packet.pcm:
-        # We need to process the audio in a separate task to avoid blocking the event loop.
-        # `pydub` is used to convert the raw PCM data to a format `SpeechRecognition` can use.
         asyncio.create_task(process_audio(user, packet.pcm))
 
 async def process_audio(user, audio_data):
     """Converts audio data to text using Google Speech Recognition."""
     try:
-        # Create an AudioSegment from the raw PCM data
         audio_segment = AudioSegment(
             audio_data, 
             sample_width=2, 
@@ -85,10 +82,8 @@ async def process_audio(user, audio_data):
             channels=2
         )
         
-        # Convert the AudioSegment to a WAV-like byte stream
         wav_stream = audio_segment.export(format="wav").read()
         
-        # Use SpeechRecognition to recognize the audio
         audio = sr.AudioData(wav_stream, 48000, 2)
         text = recognizer.recognize_google(audio).upper()
         print(f"[HEARD] {user.display_name}: {text}")
@@ -99,8 +94,9 @@ async def process_audio(user, audio_data):
         if "10 8" in text or "TEN EIGHT" in text:
             await speak(f"{user.display_name} is now 10-8")
         
-        if "10 11" in text or "ten eleven" in text:
-            await speak(f"10 4, proceed with caution")
+        if "10 11" in text or "TEN ELEVEN" in text:
+            await speak("10 4, proceed with caution")
+            
     except sr.UnknownValueError:
         print(f"[DEBUG] Could not understand {user.display_name}")
     except sr.RequestError as e:
@@ -122,9 +118,10 @@ async def start(ctx):
         await ctx.send("I'm already online!")
         return
 
-    # Connect using the VoiceClient from the new library
-    voice_client_ref = await VoiceClient.connect(channel)
-    voice_client_ref.on_speaking = on_speaking
+    voice_client_ref = await channel.connect(cls=VoiceRecvClient)
+    
+    voice_client_ref.on_voice_member_speaking_start = on_voice_member_speaking_start
+    voice_client_ref.on_voice_member_speaking_end = on_voice_member_speaking_end
     voice_client_ref.on_voice_packet = on_voice_packet
 
     await asyncio.sleep(0.5)
@@ -144,4 +141,3 @@ async def stop(ctx):
 if __name__ == "__main__":
     keep_alive()
     bot.run(TOKEN)
-
