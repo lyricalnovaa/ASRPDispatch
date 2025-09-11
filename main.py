@@ -99,7 +99,9 @@ async def process_audio(user, audio_data):
             await speak(f"Hello {user.display_name}!")
         if "10 8" in text or "TEN EIGHT" in text:
             await speak(f"{user.display_name} is now 10-8")
-
+        
+        if "10 11" in text or "ten eleven" in text:
+            await speak(f"10 4, proceed with caution")
     except sr.UnknownValueError:
         print(f"[DEBUG] Could not understand {user.display_name}")
     except sr.RequestError as e:
