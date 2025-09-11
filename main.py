@@ -1,14 +1,12 @@
-import os
-import asyncio
+import os 
+import asyncio 
 import discord
-from discord.ext import commands
-import speech_recognition as sr
+from discord.ext import commands 
+import speech_recognition as sr 
 import edge_tts
-from dotenv import load_dotenv
-from keep_alive import keep_alive
+from doten import load_dotenv 
+from keep_alive import keep_alive 
 from pydub import AudioSegment
-from discord.ext.voice_recv import VoiceClient, SpeakingState
-
 # === CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
