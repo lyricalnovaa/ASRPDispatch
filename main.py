@@ -7,7 +7,7 @@ import edge_tts
 from dotenv import load_dotenv 
 from keep_alive import keep_alive 
 from pydub import AudioSegment
-from discord.ext.voice_recv import VoiceClient, SpeakingState
+from discord.ext.voice_recv import VoiceRecvClient, SpeakingState
 # === CONFIG ===
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
